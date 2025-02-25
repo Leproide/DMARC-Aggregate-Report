@@ -1,6 +1,8 @@
 # DMARC Aggregate Report
 Python script for generating human-readable HTML summaries with a chart for aggregated DMARC reports.
 
+[![Watch the video](https://i.ytimg.com/vi/Ano6yCrjdys/maxresdefault.jpg?sqp=-oaymwEmCIAKENAF8quKqQMa8AEB-AH-CYAC0AWKAgwIABABGE8gUihlMA8=&rs=AOn4CLB4UHVeL4RZXqXB1HtyQItoCBuEOw)](https://youtu.be/Ano6yCrjdys)
+
 ### Dependencies
 ```bash
 pip install matplotlib
