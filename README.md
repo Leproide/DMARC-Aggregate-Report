@@ -2,7 +2,7 @@
 Python script for generating human-readable HTML summaries with a chart for aggregated DMARC reports.
 
 ### Video
-[![Watch the video](![immagine](https://github.com/user-attachments/assets/603f70a2-505c-4dd7-8744-1ca66ca161e3)](https://youtu.be/Ano6yCrjdys)
+[![Video](https://github.com/user-attachments/assets/603f70a2-505c-4dd7-8744-1ca66ca161e3)](https://youtu.be/Ano6yCrjdys)
 
 ### Dependencies
 ```bash
