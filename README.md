@@ -11,7 +11,9 @@ pip install matplotlib
 - Run `report.bat`.
 
 The Python script will create a folder with today's date and generate a report with all the data found in the provided XML files.
+
 When the report is generated, all files in the working folder `dmarc_reports` will be automatically deleted. 
+
 You can easily automate the creation of reports upon receiving a DMARC email by scripting it within an email client (eg, Thunderbird with FiltaQuilla addon).
 
 The HTML report has two modes:
