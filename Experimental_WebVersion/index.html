@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>DMARC report analyzer</title>
+  <style>
+    /* Stili in tema Dracula */
+    body { 
+      font-family: Arial, sans-serif; 
+      margin: 20px; 
+      background-color: #282a36; 
+      color: #f8f8f2; 
+    }
+    .header { 
+      background-color: #44475a; 
+      padding: 20px; 
+      border-radius: 8px; 
+      box-shadow: 0 2px 5px rgba(0,0,0,0.5); 
+      margin-bottom: 20px; 
+      position: relative; 
+      text-align: center; 
+    }
+    .header h1 { 
+      margin: 0; 
+      color: #f8f8f2; 
+    }
+    /* In modalità stampabile, il titolo diventa nero */
+    body.print-mode .header h1 { 
+      color: #000000; 
+    }
+    .toggle-button, .action-button { 
+      padding: 10px 15px; 
+      border-radius: 5px; 
+      cursor: pointer; 
+      font-weight: bold; 
+      border: none; 
+      background-color: #bd93f9; 
+      color: #282a36; 
+    }
+    /* Pulsanti nella header, posizionati in alto a destra */
+    #toggleAll { position: absolute; right:20px; top:20px; }
+    #newReportBtn { position: absolute; right:330px; top:20px; display: none; }
+    #toggleMode { position: absolute; right:150px; top:20px; }
+    .chart-container { 
+      text-align: center; 
+      margin-bottom: 20px; 
+    }
+    .chart-container canvas {
+      display: block;
+      margin: 0 auto;
+    }
+    .details-section { 
+      background-color: #44475a; 
+      border-radius: 8px; 
+      padding: 10px; 
+      box-shadow: 0 2px 5px rgba(0,0,0,0.5); 
+      margin-bottom: 20px; 
+    }
+    details { 
+      margin-bottom: 10px; 
+      border: 1px solid #6272a4; 
+      border-radius: 5px; 
+      padding: 5px; 
+    }
+    summary { 
+      cursor: pointer; 
+      font-weight: bold; 
+      font-size: 1.2em; 
+      padding: 10px; 
+      background-color: #6272a4; 
+      border-radius: 5px; 
+    }
+    table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      margin-top: 10px; 
+    }
+    th, td { 
+      padding: 8px; 
+      border: 1px solid #6272a4; 
+      text-align: left; 
+    }
+    th { 
+      background-color: #bd93f9; 
+      color: #282a36; 
+    }
+    hr { 
+      border: none; 
+      border-top: 1px solid #6272a4; 
+      margin: 20px 0; 
+    }
+    .report-ids-section details { 
+      margin-bottom: 5px; 
+      border: 1px solid #6272a4; 
+      border-radius: 3px; 
+      padding: 5px; 
+    }
+    .report-ids-section summary { 
+      font-size: 1em; 
+      background-color: #6272a4; 
+      padding: 5px; 
+      border-radius: 3px; 
+      color: #282a36; 
+    }
+    .report-ids-section p { 
+      margin: 5px 10px; 
+      font-size: 0.9em; 
+    }
+    body.print-mode { 
+      background-color: #ffffff; 
+      color: #000000; 
+    }
+    body.print-mode .header { 
+      background-color: #f0f0f0; 
+      color: #000000; 
+    }
+    body.print-mode .toggle-button, 
+    body.print-mode .action-button { 
+      background-color: #dddddd; 
+      color: #000000; 
+    }
+    body.print-mode .details-section { 
+      background-color: #ffffff; 
+    }
+    body.print-mode details { 
+      border: 1px solid #ccc; 
+      background-color: #f7f7f7; 
+    }
+    body.print-mode summary { 
+      background-color: #eeeeee; 
+      color: #000000; 
+    }
+    body.print-mode th { 
+      background-color: #dddddd; 
+      color: #000000; 
+    }
+    body.print-mode td, body.print-mode th { 
+      border: 1px solid #ccc; 
+    }
+    #uploadArea { 
+      border: 2px dashed #6272a4; 
+      padding: 20px; 
+      margin: 20px 0; 
+      text-align: center; 
+      cursor: pointer; 
+    }
+    #uploadArea.hover { 
+      background-color: #44475a; 
+    }
+    #fileList p { 
+      margin: 5px; 
+    }
+    /* Sezione per il Domain input */
+    #domainInputSection {
+      margin: 20px 0;
+      text-align: left;
+    }
+  </style>
+  <!-- Inclusione del bundle UMD di Chart.js (scaricato in locale come chart.js) -->
+  <script src="chart.js"></script>
+</head>
+<body>
+  <div class="header">
+    <h1>DMARC Aggregate Report - <span id="clientNameDisplay">Example</span></h1>
+	<button id="newReportBtn" class="action-button">CLEAR</button>
+    <button id="toggleAll" class="toggle-button">Expand All</button>
+    <button id="toggleMode" class="toggle-button">Printable Version</button>
+  </div>
+
+  <!-- Sezione Domain (visibile solo prima della generazione del report) -->
+  <div id="domainInputSection">
+    <label for="clientNameInput">Domain: </label>
+    <input type="text" id="clientNameInput" placeholder="example.com">
+  </div>
+
+  <!-- Area di caricamento file (drag & drop e selezione) -->
+  <div id="uploadArea">
+    <p>Drag and drop here</p>
+    <input type="file" id="fileInput" multiple accept=".xml" style="display:none;">
+    <button id="selectFilesBtn" class="action-button">Select Files</button>
+    <div id="fileList"></div>
+  </div>
+
+  <!-- Bottone per elaborare i file -->
+  <button id="processBtn" class="action-button" disabled>Generate Report</button>
+
+  <!-- Sezione report (inizialmente nascosta) -->
+  <div id="reportSection" style="display:none;">
+    <div class="chart-container">
+      <canvas id="dmarcChart" width="400" height="400"></canvas>
+    </div>
+    <div class="details-section">
+      <details open>
+        <summary>Record Pass</summary>
+        <table id="passTable">
+          <tr>
+            <th>Source IP</th>
+            <th>Hostname</th>
+            <th>Count</th>
+            <th>Disposition</th>
+            <th>DKIM Eval</th>
+            <th>SPF Eval</th>
+            <th>Header From</th>
+          </tr>
+        </table>
+      </details>
+      <details>
+        <summary>Record Fail</summary>
+        <table id="failTable">
+          <tr>
+            <th>Source IP</th>
+            <th>Hostname</th>
+            <th>Count</th>
+            <th>Disposition</th>
+            <th>DKIM Eval</th>
+            <th>SPF Eval</th>
+            <th>Header From</th>
+          </tr>
+        </table>
+      </details>
+    </div>
+    <div class="details-section report-ids-section">
+      <details>
+        <summary>Report IDs</summary>
+        <div id="reportIDs"></div>
+      </details>
+    </div>
+  </div>
+
+  <script>
+    // Variabili globali
+    let filesArray = [];
+    const fileInput = document.getElementById('fileInput');
+    const fileListDiv = document.getElementById('fileList');
+    const processBtn = document.getElementById('processBtn');
+    const uploadArea = document.getElementById('uploadArea');
+    const clientNameInput = document.getElementById('clientNameInput');
+    const clientNameDisplay = document.getElementById('clientNameDisplay');
+    const newReportBtn = document.getElementById('newReportBtn');
+    const domainInputSection = document.getElementById('domainInputSection');
+
+    // Funzione per il reverse DNS tramite PHP
+    function resolveHostname(ip) {
+      return fetch('resolve.php?ip=' + encodeURIComponent(ip))
+        .then(response => response.text())
+        .catch(() => "N/A");
+    }
+
+    // Gestione del drag & drop
+    uploadArea.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      uploadArea.classList.add('hover');
+    });
+    uploadArea.addEventListener('dragleave', function(e) {
+      e.preventDefault();
+      uploadArea.classList.remove('hover');
+    });
+    uploadArea.addEventListener('drop', function(e) {
+      e.preventDefault();
+      uploadArea.classList.remove('hover');
+      const droppedFiles = e.dataTransfer.files;
+      handleFiles(droppedFiles);
+    });
+
+    // Selezione dei file tramite pulsante
+    document.getElementById('selectFilesBtn').addEventListener('click', function() {
+      fileInput.click();
+    });
+    fileInput.addEventListener('change', function(e) {
+      handleFiles(fileInput.files);
+    });
+
+    function handleFiles(fileList) {
+      for (let file of fileList) {
+        if (file.name.toLowerCase().endsWith('.xml')) {
+          filesArray.push(file);
+          let p = document.createElement('p');
+          p.textContent = file.name;
+          fileListDiv.appendChild(p);
+        }
+      }
+      if(filesArray.length > 0) {
+        processBtn.disabled = false;
+      }
+    }
+
+    // Elaborazione dei file al click del bottone "Generate Report"
+    processBtn.addEventListener('click', function() {
+      clientNameDisplay.textContent = clientNameInput.value || "Client";
+      let reports = [];
+      let filesProcessed = 0;
+      for (let file of filesArray) {
+        let reader = new FileReader();
+        reader.onload = function(e) {
+          let parser = new DOMParser();
+          let xmlDoc = parser.parseFromString(e.target.result, "application/xml");
+          let report = parseDmarcReport(xmlDoc);
+          if(report) { reports.push(report); }
+          filesProcessed++;
+          if(filesProcessed === filesArray.length) {
+            generateReport(reports);
+            // Nascondi l'area di upload, il bottone "Generate Report" e la sezione Domain
+            uploadArea.style.display = 'none';
+            processBtn.style.display = 'none';
+            domainInputSection.style.display = 'none';
+            // Mostra il tasto "CLEAR" (già posizionato nella header)
+            newReportBtn.style.display = 'block';
+          }
+        };
+        reader.readAsText(file);
+      }
+    });
+
+    // Funzione per analizzare il file XML e ricavare i dati necessari
+    function parseDmarcReport(xmlDoc) {
+      try {
+        let report_metadata = xmlDoc.getElementsByTagName('report_metadata')[0];
+        let policy_published = xmlDoc.getElementsByTagName('policy_published')[0];
+        if (!report_metadata || !policy_published) return null;
+
+        let org_name = report_metadata.getElementsByTagName('org_name')[0]?.textContent || "N/A";
+        let email = report_metadata.getElementsByTagName('email')[0]?.textContent || "N/A";
+        let report_id = report_metadata.getElementsByTagName('report_id')[0]?.textContent || "N/A";
+        let date_range = report_metadata.getElementsByTagName('date_range')[0];
+        let begin_epoch = date_range ? date_range.getElementsByTagName('begin')[0]?.textContent || "0" : "0";
+        let end_epoch = date_range ? date_range.getElementsByTagName('end')[0]?.textContent || "0" : "0";
+        let begin_date = new Date(parseInt(begin_epoch) * 1000).toISOString().replace('T',' ').substring(0,19);
+        let end_date = new Date(parseInt(end_epoch) * 1000).toISOString().replace('T',' ').substring(0,19);
+
+        let published_domain = policy_published.getElementsByTagName('domain')[0]?.textContent || "N/A";
+        let adkim = policy_published.getElementsByTagName('adkim')[0]?.textContent || "N/A";
+        let aspf = policy_published.getElementsByTagName('aspf')[0]?.textContent || "N/A";
+        let p = policy_published.getElementsByTagName('p')[0]?.textContent || "N/A";
+        let sp = policy_published.getElementsByTagName('sp')[0]?.textContent || "N/A";
+        let pct = policy_published.getElementsByTagName('pct')[0]?.textContent || "N/A";
+
+        let records = [];
+        let recordNodes = xmlDoc.getElementsByTagName('record');
+        for (let i = 0; i < recordNodes.length; i++) {
+          let record = recordNodes[i];
+          let row = record.getElementsByTagName('row')[0];
+          if (row) {
+            let source_ip = row.getElementsByTagName('source_ip')[0]?.textContent || "N/A";
+            // Placeholder per il reverse DNS (verrà aggiornato via AJAX)
+            let hostname = "Loading...";
+            let count = row.getElementsByTagName('count')[0]?.textContent || "0";
+            let policy_evaluated = row.getElementsByTagName('policy_evaluated')[0];
+            let disposition = policy_evaluated ? policy_evaluated.getElementsByTagName('disposition')[0]?.textContent || "N/A" : "N/A";
+            let dkim_eval = policy_evaluated ? policy_evaluated.getElementsByTagName('dkim')[0]?.textContent || "N/A" : "N/A";
+            let spf_eval = policy_evaluated ? policy_evaluated.getElementsByTagName('spf')[0]?.textContent || "N/A" : "N/A";
+
+            let identifiers = record.getElementsByTagName('identifiers')[0];
+            let header_from = identifiers ? identifiers.getElementsByTagName('header_from')[0]?.textContent || "N/A" : "N/A";
+
+            records.push({
+              source_ip,
+              hostname,
+              count,
+              disposition,
+              dkim_eval,
+              spf_eval,
+              header_from
+            });
+          }
+        }
+        return {
+          org_name,
+          email,
+          report_id,
+          begin_date,
+          end_date,
+          published_domain,
+          adkim,
+          aspf,
+          p,
+          sp,
+          pct,
+          records
+        };
+      } catch (error) {
+        console.error("Error parsing XML", error);
+        return null;
+      }
+    }
+
+    // Funzione per generare il report interattivo
+    function generateReport(reports) {
+      // Aggrega tutti i record per il grafico
+      let all_records = [];
+      reports.forEach(report => {
+        all_records = all_records.concat(report.records);
+      });
+      let passCount = 0, failCount = 0;
+      all_records.forEach(record => {
+        let cnt = parseInt(record.count) || 1;
+        if(record.dkim_eval.toLowerCase() === "pass" && record.spf_eval.toLowerCase() === "pass") {
+          passCount += cnt;
+        } else {
+          failCount += cnt;
+        }
+      });
+
+      // Genera il grafico a torta con Chart.js
+      let ctx = document.getElementById('dmarcChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: ['Pass', 'Fail'],
+          datasets: [{
+            data: [passCount, failCount],
+            backgroundColor: ['#50fa7b', '#ff5555']
+          }]
+        },
+        options: {
+          responsive: false,
+          plugins: {
+            legend: {
+              labels: { font: { size: 16, weight: 'bold' } }
+            },
+            title: {
+              display: true,
+              text: 'DMARC: Pass vs Fail',
+              font: { size: 25, weight: 'bold' }
+            }
+          }
+        }
+      });
+
+      // Popola le tabelle Pass e Fail
+      const passTable = document.getElementById('passTable');
+      const failTable = document.getElementById('failTable');
+      all_records.forEach(record => {
+        let row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${record.source_ip}</td>
+          <td class="hostname" data-ip="${record.source_ip}">Loading...</td>
+          <td>${record.count}</td>
+          <td>${record.disposition}</td>
+          <td>${record.dkim_eval}</td>
+          <td>${record.spf_eval}</td>
+          <td>${record.header_from}</td>
+        `;
+        if(record.dkim_eval.toLowerCase() === "pass" && record.spf_eval.toLowerCase() === "pass") {
+          passTable.appendChild(row);
+        } else {
+          failTable.appendChild(row);
+        }
+      });
+
+      // Popola la sezione Report IDs
+      const reportIDsDiv = document.getElementById('reportIDs');
+      reports.forEach(report => {
+        let detailsDiv = document.createElement('div');
+        detailsDiv.innerHTML = `
+          <details>
+            <summary>Report ID: ${report.report_id}</summary>
+            <p><strong>Organizzazione:</strong> ${report.org_name}</p>
+            <p><strong>Email di Contatto:</strong> ${report.email}</p>
+            <p><strong>Dominio Pubblicato:</strong> ${report.published_domain}</p>
+            <p><strong>Intervallo di Date:</strong> ${report.begin_date} - ${report.end_date}</p>
+            <p><strong>DMARC Policy:</strong> p=${report.p}, sp=${report.sp}, pct=${report.pct}</p>
+            <p><strong>Alignment:</strong> ADKIM=${report.adkim}, ASPF=${report.aspf}</p>
+            <hr>
+          </details>
+        `;
+        reportIDsDiv.appendChild(detailsDiv);
+      });
+
+      // Aggiorna le celle per il reverse DNS
+      document.querySelectorAll('.hostname').forEach(function(cell) {
+        let ip = cell.dataset.ip;
+        resolveHostname(ip).then(hostname => {
+          cell.textContent = hostname;
+        });
+      });
+
+      // Mostra la sezione del report
+      document.getElementById('reportSection').style.display = 'block';
+    }
+
+    // Funzionalità dei pulsanti di toggle per espandere/contrarre i dettagli
+    document.getElementById('toggleAll').addEventListener('click', function() {
+      const details = document.querySelectorAll('details');
+      let allOpen = true;
+      details.forEach(function(detail) { if (!detail.open) { allOpen = false; } });
+      if (!allOpen) {
+        details.forEach(function(detail) { detail.open = true; });
+        this.textContent = "Collapse All";
+      } else {
+        details.forEach(function(detail) { detail.open = false; });
+        this.textContent = "Expand All";
+      }
+    });
+    document.getElementById('toggleMode').addEventListener('click', function() {
+      document.body.classList.toggle('print-mode');
+      this.textContent = document.body.classList.contains('print-mode') ? "Dark Mode" : "Printable Version";
+    });
+
+    // Bottone per generare un nuovo report: ricarica la pagina per resettare tutto
+    newReportBtn.addEventListener('click', function() {
+      window.location.reload();
+    });
+  </script>
+</body>
+</html>
