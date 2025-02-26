@@ -14,7 +14,7 @@ pip install matplotlib
 ### Instructions
 
 - Place all the XML reports (or zip/gz archive) in a folder named `dmarc_reports`.
-- Run `report.bat`.
+- Run `report.bat` (or the improved powershell version).
 
 You can edit the `report.bat` file to change the title of the DMARC report:
 ```bash
