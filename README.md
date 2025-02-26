@@ -1,6 +1,9 @@
 # DMARC Aggregate Report
 Python script for generating human-readable HTML summaries with a chart for aggregated DMARC reports.
 
+### Report example
+https://muninn.ovh/github/DMARC-Aggregate-Report/
+
 ### Video
 [![Video](https://github.com/user-attachments/assets/603f70a2-505c-4dd7-8744-1ca66ca161e3)](https://youtu.be/uKuLERWC6co)
 
